@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  trainer
+  admin
+}
+
+model Trainer {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  role          Role      @default(trainer)
+  ratePerHour   Decimal   @map("rate_per_hour") @db.Decimal(10, 2)
+  iban          String?
+  sessions      Session[]
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+}
+
+model Team {
+  id        String    @id @default(uuid())
+  name      String
+  league    String?
+  isYouth   Boolean   @map("is_youth") @default(false)
+  sessions  Session[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  trainer    Trainer  @relation(fields: [trainerId], references: [id])
+  trainerId  String   @map("trainer_id")
+  team       Team     @relation(fields: [teamId], references: [id])
+  teamId     String   @map("team_id")
+  date       DateTime @db.Date
+  startTime  DateTime? @map("start_time") @db.Time
+  endTime    DateTime? @map("end_time") @db.Time
+  hours      Decimal?  @db.Decimal(5, 2)
+  location   String?
+  note       String?  @db.Text
+  approved   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+}
