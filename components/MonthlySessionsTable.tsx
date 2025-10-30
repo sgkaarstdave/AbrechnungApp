@@ -17,6 +17,8 @@ export interface MonthlySessionRow {
   date: string;
   team: string;
   trainer: string;
+  startTime?: string | null;
+  endTime?: string | null;
   hours: number;
   note: string;
   location: string;
@@ -40,6 +42,15 @@ export function MonthlySessionsTable({
   showTrainerColumn,
   exportTrainerId
 }: MonthlySessionsTableProps) {
+  const hasTimeColumns = React.useMemo(() => sessions.some((session) => session.startTime || session.endTime), [sessions]);
+
+  const formatTime = React.useCallback((value?: string | null) => {
+    if (!value) {
+      return "—";
+    }
+    return value.length >= 16 ? value.slice(11, 16) : value;
+  }, []);
+
   const columns = useMemo<ColumnDef<MonthlySessionRow>[]>(
     () => {
       const base: ColumnDef<MonthlySessionRow>[] = [
@@ -56,6 +67,20 @@ export function MonthlySessionsTable({
           ? {
               header: "Trainer",
               accessorKey: "trainer"
+            }
+          : undefined,
+        hasTimeColumns
+          ? {
+              header: "Beginn",
+              accessorKey: "startTime",
+              cell: (ctx) => formatTime(ctx.getValue<string | null>())
+            }
+          : undefined,
+        hasTimeColumns
+          ? {
+              header: "Ende",
+              accessorKey: "endTime",
+              cell: (ctx) => formatTime(ctx.getValue<string | null>())
             }
           : undefined,
         {
@@ -88,7 +113,7 @@ export function MonthlySessionsTable({
       ].filter(Boolean) as ColumnDef<MonthlySessionRow>[];
       return base;
     },
-    [showTrainerColumn]
+    [formatTime, hasTimeColumns, showTrainerColumn]
   );
 
   const table = useReactTable({ data: sessions, columns, getCoreRowModel: getCoreRowModel() });
