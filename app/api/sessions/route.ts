@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
-import { createSupabaseRouteClient } from "@/lib/auth";
+import { authOptions } from "@/lib/auth-options";
 import { hoursFromTimes, roundToQuarterHours } from "@/lib/time";
 
 const bodySchema = z.object({
@@ -21,16 +22,13 @@ export async function POST(request: Request) {
     const json = await request.json();
     const body = bodySchema.parse(json);
 
-    const supabase = createSupabaseRouteClient();
-    const {
-      data: { session }
-    } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Nicht authentifiziert" }, { status: 401 });
     }
 
-    const currentTrainer = await prisma.trainer.findUnique({ where: { email: session.user.email } });
+    const currentTrainer = await prisma.trainer.findUnique({ where: { id: session.user.id } });
     if (!currentTrainer) {
       return NextResponse.json({ message: "Trainer nicht gefunden" }, { status: 403 });
     }

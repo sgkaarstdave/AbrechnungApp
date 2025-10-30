@@ -1,8 +1,11 @@
 import { PrismaClient, Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminPasswordHash = await bcrypt.hash("admin1234", 10);
+
   const admin = await prisma.trainer.upsert({
     where: { email: "admin@volley.local" },
     create: {
@@ -10,7 +13,21 @@ async function main() {
       email: "admin@volley.local",
       role: Role.admin,
       ratePerHour: 35,
-      iban: "DE12345678901234567890"
+      iban: "DE12345678901234567890",
+      passwordHash: adminPasswordHash
+    },
+    update: {}
+  });
+
+  await prisma.trainer.upsert({
+    where: { email: "trainer@volley.local" },
+    create: {
+      name: "Tina Trainer",
+      email: "trainer@volley.local",
+      role: Role.trainer,
+      ratePerHour: 28,
+      iban: "DE09876543210987654321",
+      passwordHash: await bcrypt.hash("trainer1234", 10)
     },
     update: {}
   });

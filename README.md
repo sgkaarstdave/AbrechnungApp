@@ -1,6 +1,8 @@
 # volley-abrechnung
 
-Ein Minimal-MVP für Volleyball-Übungsleiter zur Erfassung von Trainingseinheiten und monatlichen Abrechnungen. Trainer können Trainings über ein Formular anlegen, ihre geleisteten Stunden einsehen und eine Excel-Abrechnung exportieren. Admins verwalten Teams und sehen alle Einträge.
+Eine moderne Next.js App für Volleyball-Trainer:innen zur Erfassung von Trainingseinheiten und automatischen Monatsabrechnungen.
+Trainer können sich registrieren, Trainingszeiten erfassen, ihre Stunden einsehen und fertige Excel-Nachweise herunterladen. Admins
+sehen alle Trainer und können Monatsberichte automatisiert erzeugen.
 
 ## Quickstart
 
@@ -13,7 +15,12 @@ pnpm dev
 
 Öffne danach `http://localhost:3000`.
 
-### Wichtige Skripte
+Seed-Zugangsdaten:
+
+- Admin: `admin@volley.local` / `admin1234`
+- Trainer: `trainer@volley.local` / `trainer1234`
+
+## Wichtige Skripte
 
 | Zweck | Kommando |
 | --- | --- |
@@ -24,41 +31,36 @@ pnpm dev
 
 ## Environment Variablen
 
-Lege eine `.env` Datei an und befülle sie basierend auf `.env.example`:
+Lege eine `.env` Datei an und befülle sie wie folgt:
 
 ```
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-DATABASE_URL=postgresql://...
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+DATABASE_URL=postgresql://user:password@localhost:5432/volley
+NEXTAUTH_SECRET=ein-langes-geheimes-token
+NEXTAUTH_URL=http://localhost:3000
+CRON_SECRET=geheimer-cron-token
 ```
 
-`SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_URL` sind identisch. Für lokale Entwicklung kannst du Supabase lokal betreiben oder das gehostete Projekt nutzen. `DATABASE_URL` muss auf dieselbe Postgres-Instanz zeigen, die in Supabase hinterlegt ist.
+- `NEXTAUTH_SECRET` kannst du mit `openssl rand -base64 32` generieren.
+- `CRON_SECRET` wird genutzt, um den Cron-Endpunkt für automatische Berichte zu schützen.
 
 ## Architektur
 
-- **Next.js App Router (TypeScript)** für UI und API-Routen
-- **Supabase** für Magic-Link Authentifizierung & Postgres
-- **Prisma** als ORM, `npx prisma generate` bei Schema-Änderungen
+- **Next.js App Router (TypeScript)** für UI & API-Routen
+- **NextAuth (Credentials Provider)** für Registrierung & Login
+- **Prisma** als ORM für Postgres
 - **Tailwind + shadcn/ui** für UI-Komponenten
 - **exceljs** erzeugt XLSX-Abrechnungen
+- Monatliche Reports werden als Binärdaten in der Tabelle `MonthlyReport` gespeichert
 
-## Rollen & Policies
+## Automatische Monatsberichte
 
-- Trainer sehen nur eigene Sessions.
-- Admins dürfen alle Sessions einsehen/exportieren.
-- Implementiere in Supabase Row-Level Security (RLS) mit Policies wie:
-  - `trainer_id = auth.uid()` für Trainer-Tabellenzugriffe.
-  - Admin-Rolle (JWT Claim) erhält `using (true)`.
-
-## Deploy & Automatisierung
-
-- Deployment via Vercel. Hinterlege Supabase-Keys & `DATABASE_URL` als Environment Variablen.
-- Cron-Idee: Vercel Cron `0 10 1 * *` (Europe/Berlin 00:10 am 1. des Monats) ruft `/api/export?month=YYYY-MM` je Trainer auf und verschickt das Ergebnis per Mail (nicht Teil dieses MVP).
+- Manuelle Exporte über die Oberfläche rufen `/api/export?month=YYYY-MM` auf und speichern den Bericht.
+- Ein Cron-Endpunkt (`POST /api/reports/cron`) generiert für alle Trainer den Bericht des Vormonats. Authentifiziere den Aufruf mit
+  `Authorization: Bearer $CRON_SECRET` (z. B. via Vercel Cron `0 5 1 * *`).
+- Bereits erzeugte Berichte erscheinen in der Übersicht und lassen sich jederzeit herunterladen.
 
 ## Weitere Hinweise
 
-- Nach dem ersten `pnpm install` einmal `npx prisma generate` ausführen, damit der Prisma Client bereitsteht.
-- Passe den Seed an deine Trainer- und Teamdaten an.
-- Magic-Link Auth wird über Supabase gesteuert; im MVP sind nur Server-Checks enthalten.
+- Nach Schema-Änderungen `pnpm db:push` und `pnpm db:seed` ausführen, damit der Prisma Client aktualisiert wird.
+- Passe den Seed an eure Teams & Trainer an.
+- Für Produktion `NEXTAUTH_URL` auf die öffentliche Domain setzen und den Cron-Endpunkt per Infrastruktur-Scheduler aufrufen.

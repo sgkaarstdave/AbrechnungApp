@@ -1,35 +1,53 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, FileSpreadsheet } from "lucide-react";
+import { CalendarCheck, FileSpreadsheet, Sparkles } from "lucide-react";
+import { getAuthenticatedTrainer } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const trainer = await getAuthenticatedTrainer();
+
   return (
-    <section className="space-y-6">
-      <h1 className="text-3xl font-semibold">Willkommen bei volley-abrechnung</h1>
-      <p className="text-muted-foreground">
-        Erfasse Trainingseinheiten, halte den Überblick über deine Stunden und lade monatliche
-        Excel-Abrechnungen herunter.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <CalendarCheck className="mb-3 h-6 w-6 text-primary" />
-          <h2 className="font-medium">Training erfassen</h2>
-          <p className="text-sm text-muted-foreground">
-            Datum, Team, Zeiten oder Stundenzahl mit Notizen festhalten.
-          </p>
-          <Button asChild className="mt-3 w-full">
-            <Link href="/erfassen">Zum Formular</Link>
+    <section className="space-y-8">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-semibold">Abrechnung leicht gemacht</h1>
+        <p className="text-muted-foreground">
+          Mit volley-abrechnung dokumentieren Volleyball-Trainer:innen ihre Einheiten in Sekunden und erhalten
+          automatisch vorbereitete Monatsnachweise für den Verein.
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button asChild className="sm:w-auto">
+            <Link href={trainer ? "/erfassen" : "/register"}>
+              {trainer ? "Training erfassen" : "Kostenlos registrieren"}
+            </Link>
           </Button>
+          {!trainer && (
+            <Button asChild variant="outline" className="sm:w-auto">
+              <Link href="/login">Ich habe bereits einen Account</Link>
+            </Button>
+          )}
         </div>
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <FileSpreadsheet className="mb-3 h-6 w-6 text-primary" />
-          <h2 className="font-medium">Meine Stunden</h2>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <CalendarCheck className="mb-3 h-6 w-6 text-primary" />
+          <h2 className="font-medium">Schnelle Erfassung</h2>
           <p className="text-sm text-muted-foreground">
-            Aktuellen Monat prüfen und als Excel herunterladen.
+            Datum, Team und Dauer mit wenigen Klicks dokumentieren – wahlweise über Zeiten oder direkte Stundenangabe.
           </p>
-          <Button asChild variant="secondary" className="mt-3 w-full">
-            <Link href="/meine-stunden">Übersicht anzeigen</Link>
-          </Button>
+        </div>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <FileSpreadsheet className="mb-3 h-6 w-6 text-primary" />
+          <h2 className="font-medium">Monatsübersicht</h2>
+          <p className="text-sm text-muted-foreground">
+            Trainingsstunden pro Monat auswerten, Freigaben sehen und Excel-Nachweise herunterladen.
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <Sparkles className="mb-3 h-6 w-6 text-primary" />
+          <h2 className="font-medium">Automatische Reports</h2>
+          <p className="text-sm text-muted-foreground">
+            Zum Monatsende generiert das System fertige Excel-Dateien zum Download oder Versand an den Verein.
+          </p>
         </div>
       </div>
     </section>
