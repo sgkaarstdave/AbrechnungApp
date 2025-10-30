@@ -29,6 +29,7 @@ export interface MonthlySessionsTableProps {
   totalAmount: number;
   month: string;
   showTrainerColumn: boolean;
+  exportTrainerId?: string;
 }
 
 export function MonthlySessionsTable({
@@ -36,7 +37,8 @@ export function MonthlySessionsTable({
   totalHours,
   totalAmount,
   month,
-  showTrainerColumn
+  showTrainerColumn,
+  exportTrainerId
 }: MonthlySessionsTableProps) {
   const columns = useMemo<ColumnDef<MonthlySessionRow>[]>(
     () => {
@@ -92,8 +94,9 @@ export function MonthlySessionsTable({
   const table = useReactTable({ data: sessions, columns, getCoreRowModel: getCoreRowModel() });
 
   const handleExport = async () => {
+    const trainerQuery = exportTrainerId ? `&trainerId=${exportTrainerId}` : "";
     try {
-      const response = await fetch(`/api/export?month=${month}`);
+      const response = await fetch(`/api/export?month=${month}${trainerQuery}`);
       if (!response.ok) {
         throw new Error("Export fehlgeschlagen");
       }
@@ -166,7 +169,7 @@ export function MonthlySessionsTable({
             <span className="font-medium">Summe:</span> {new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(totalAmount)}
           </p>
         </div>
-        <Button type="button" onClick={handleExport} className="w-full sm:w-auto">
+        <Button type="button" onClick={handleExport} className="w-full sm:w-auto" disabled={!exportTrainerId && showTrainerColumn}>
           <Download className="mr-2 h-4 w-4" /> Excel-Export
         </Button>
       </div>

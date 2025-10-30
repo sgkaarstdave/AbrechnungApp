@@ -9,13 +9,26 @@ export default async function ErfassenPage() {
     trainer = await requireTrainer();
   } catch (error) {
     console.error("Auth fehlgeschlagen", error);
-    redirect("/");
+    redirect("/login");
   }
 
   const teams = await prisma.team.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true }
   });
+
+  if (teams.length === 0) {
+    return (
+      <section className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold">Training erfassen</h1>
+          <p className="text-sm text-muted-foreground">
+            Bitte lege zuerst Teams in der Datenbank an, bevor Trainingseinheiten erfasst werden können.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-6">

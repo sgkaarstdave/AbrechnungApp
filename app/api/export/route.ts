@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/db";
-import { createSupabaseRouteClient } from "@/lib/auth";
 import { exportTrainerMonthToXlsx, getTrainerMonthFilename } from "@/lib/excel";
+import { authOptions } from "@/lib/auth-options";
 
 function getMonthBounds(month: string) {
   const [year, monthPart] = month.split("-").map(Number);
@@ -23,16 +24,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "month Parameter erforderlich" }, { status: 400 });
     }
 
-    const supabase = createSupabaseRouteClient();
-    const {
-      data: { session }
-    } = await supabase.auth.getSession();
+    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Nicht authentifiziert" }, { status: 401 });
     }
 
-    const requestingTrainer = await prisma.trainer.findUnique({ where: { email: session.user.email } });
+    const requestingTrainer = await prisma.trainer.findUnique({ where: { id: session.user.id } });
     if (!requestingTrainer) {
       return NextResponse.json({ message: "Trainer nicht gefunden" }, { status: 403 });
     }
@@ -47,6 +45,29 @@ export async function GET(request: Request) {
     const trainer = await prisma.trainer.findUnique({ where: { id: trainerIdToExport } });
     if (!trainer) {
       return NextResponse.json({ message: "Trainer für Export nicht gefunden" }, { status: 404 });
+    }
+
+    const storedReport = await prisma.monthlyReport.findUnique({
+      where: {
+        trainerId_month: {
+          trainerId: trainer.id,
+          month
+        }
+      }
+    });
+
+    const filename = getTrainerMonthFilename(trainer.name, month);
+
+    if (storedReport) {
+      const buffer = Buffer.from(storedReport.data);
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="${filename}"`
+        }
+      });
     }
 
     const { start, end } = getMonthBounds(month);
@@ -78,7 +99,22 @@ export async function GET(request: Request) {
       month
     });
 
-    const filename = getTrainerMonthFilename(trainer.name, month);
+    await prisma.monthlyReport.upsert({
+      where: {
+        trainerId_month: {
+          trainerId: trainer.id,
+          month
+        }
+      },
+      update: {
+        data: buffer
+      },
+      create: {
+        trainerId: trainer.id,
+        month,
+        data: buffer
+      }
+    });
 
     return new NextResponse(buffer, {
       status: 200,

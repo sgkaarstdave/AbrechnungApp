@@ -19,7 +19,9 @@ model Trainer {
   role          Role      @default(trainer)
   ratePerHour   Decimal   @map("rate_per_hour") @db.Decimal(10, 2)
   iban          String?
+  passwordHash  String    @map("password_hash")
   sessions      Session[]
+  reports       MonthlyReport[]
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 }
@@ -49,4 +51,16 @@ model Session {
   approved   Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+}
+
+model MonthlyReport {
+  id        String   @id @default(uuid())
+  trainer   Trainer  @relation(fields: [trainerId], references: [id])
+  trainerId String   @map("trainer_id")
+  month     String
+  data      Bytes    @map("data")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([trainerId, month])
 }

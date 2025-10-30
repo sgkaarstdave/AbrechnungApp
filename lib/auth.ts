@@ -1,27 +1,27 @@
-import { cookies } from "next/headers";
-import { createRouteHandlerClient, createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { Database } from "@/types/supabase";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 
-export function createSupabaseServerClient() {
-  return createServerComponentClient<Database>({ cookies });
-}
-
-export function createSupabaseRouteClient() {
-  return createRouteHandlerClient<Database>({ cookies });
-}
-
 export async function getAuthenticatedTrainer() {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-
-  if (!session?.user?.email) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
     return null;
   }
 
-  const trainer = await prisma.trainer.findUnique({ where: { email: session.user.email } });
+  const trainer = await prisma.trainer.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      ratePerHour: true,
+      iban: true,
+      createdAt: true,
+      updatedAt: true
+    }
+  });
+
   return trainer;
 }
 
