@@ -82,12 +82,24 @@ export default async function MeineStundenPage({ searchParams }: MeineStundenPag
   const totalHours = sessions.reduce((sum, session) => sum + Number(session.hours ?? 0), 0);
   const hourlyRate = Number(targetTrainer.ratePerHour ?? trainer.ratePerHour ?? 0);
   const totalAmount = totalHours * hourlyRate;
+  const approvedSessions = sessions.filter((session) => session.approved);
+  const approvedHours = approvedSessions.reduce((sum, session) => sum + Number(session.hours ?? 0), 0);
+  const pendingHours = Math.max(totalHours - approvedHours, 0);
+  const totalSessions = sessions.length;
+  const approvedSessionsCount = approvedSessions.length;
+  const pendingSessionsCount = totalSessions - approvedSessionsCount;
+  const trainerIban = targetTrainer.iban ?? trainer.iban ?? null;
+  const currencyFormatter = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+  const formattedHourlyRate = currencyFormatter.format(hourlyRate);
+  const formattedTotalAmount = currencyFormatter.format(totalAmount);
 
   const tableRows = sessions.map((session) => ({
     id: session.id,
     date: session.date.toISOString(),
     team: session.team.name,
     trainer: targetTrainer.name,
+    startTime: session.startTime ? session.startTime.toISOString() : null,
+    endTime: session.endTime ? session.endTime.toISOString() : null,
     hours: Number(session.hours ?? 0),
     note: session.note ?? "",
     location: session.location ?? "",
@@ -123,18 +135,66 @@ export default async function MeineStundenPage({ searchParams }: MeineStundenPag
         )}
       </div>
 
-      <MonthlySessionsTable
-        sessions={tableRows}
-        totalHours={totalHours}
-        totalAmount={totalAmount}
-        month={month}
-        showTrainerColumn={trainer.role === "admin"}
-        exportTrainerId={targetTrainer.id}
-      />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-sm text-muted-foreground">Trainings im Monat</p>
+          <p className="mt-2 text-2xl font-semibold">{totalSessions}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {approvedSessionsCount} freigegeben · {pendingSessionsCount} offen
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-sm text-muted-foreground">Gesamtstunden</p>
+          <p className="mt-2 text-2xl font-semibold">{totalHours.toFixed(2)} h</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {approvedHours.toFixed(2)} h freigegeben · {pendingHours.toFixed(2)} h offen
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-5 shadow-sm">
+          <p className="text-sm text-muted-foreground">Summe</p>
+          <p className="mt-2 text-2xl font-semibold">{formattedTotalAmount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Stundensatz {formattedHourlyRate}</p>
+        </div>
+      </div>
 
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Automatisch erzeugte Nachweise</h2>
-        <MonthlyReportList reports={reportSummaries} />
+      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <MonthlySessionsTable
+          sessions={tableRows}
+          totalHours={totalHours}
+          totalAmount={totalAmount}
+          month={month}
+          showTrainerColumn={trainer.role === "admin"}
+          exportTrainerId={targetTrainer.id}
+        />
+
+        <div className="space-y-4">
+          <div className="rounded-lg border bg-card p-5 shadow-sm">
+            <h2 className="text-lg font-semibold">Abrechnungsdetails</h2>
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <dt className="text-muted-foreground">Trainer:in</dt>
+                <dd className="text-right font-medium">{targetTrainer.name}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="text-muted-foreground">E-Mail</dt>
+                <dd className="text-right font-medium break-all">{targetTrainer.email}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="text-muted-foreground">Stundensatz</dt>
+                <dd className="text-right font-medium">{formattedHourlyRate}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <dt className="text-muted-foreground">IBAN</dt>
+                <dd className="text-right font-medium break-all">{trainerIban ?? "—"}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Automatisch erzeugte Nachweise</h2>
+            <MonthlyReportList reports={reportSummaries} />
+          </div>
+        </div>
       </div>
     </section>
   );
